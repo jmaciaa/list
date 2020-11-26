@@ -4,46 +4,51 @@ import './App.css';
 // TO DO -> accesibility, Redux/useReducer, modificarrrr
 
 function App() {
-  const [todos, setTodos] = useState([]);
+  const [elements, setElements] = useState({});
   const [value, setValue] = useState('');
 
-  const addTask = (e) => {
+  const addElement = (e) => {
     e.preventDefault();
-    const task = e.target.elements.task.value.trim();
-    if (task !== '') {
-      setTodos([...todos, { id: Date.now(), task }]);
+    const newElement = e.target.elements.element.value.trim();
+    if (newElement !== '') {
+      const id = Date.now();
+      setElements({ ...elements, [id]: newElement });
       setValue('');
     }
   };
 
-  const modifyTask = (e, id) => {
-    const newTask = e.target.textContent;
-    const newTodo = { id, task: newTask };
-    const updated = todos.filter((todo) => todo.id !== id);
-    setTodos([...updated, newTodo]);
+  const modifyElement = (e, id) => {
+    const newElement = e.target.textContent;
+    setElements({ ...elements, [id]: newElement });
   };
 
-  const deleteTask = (e, id) => {
-    setTodos(todos.filter((todo) => todo.id !== id));
+  const deleteElement = (e, id) => {
+    const newElements = { ...elements };
+    delete newElements[id];
+    setElements(newElements);
   };
 
   return (
     <div className="App">
-      <Form addTask={addTask} value={value} setValue={setValue} />
-      <TodoList todos={todos} deleteTask={deleteTask} modifyTask={modifyTask} />
+      <Form addElement={addElement} value={value} setValue={setValue} />
+      <List
+        elements={elements}
+        deleteElement={deleteElement}
+        modifyElement={modifyElement}
+      />
     </div>
   );
 }
 
-const Form = ({ addTask, value, setValue }) => {
+const Form = ({ addElement, value, setValue }) => {
   return (
-    <form action="" onSubmit={addTask}>
-      <label htmlFor="task"></label>
+    <form onSubmit={addElement}>
+      <label htmlFor="element"></label>
       <input
         type="text"
-        id="task"
+        id="element"
         value={value}
-        placeholder="Add a task to your list"
+        placeholder="Add an element"
         onChange={(e) => setValue(e.target.value)}
       />
       <button type="submit">Add</button>
@@ -51,20 +56,30 @@ const Form = ({ addTask, value, setValue }) => {
   );
 };
 
-const TodoList = ({ todos, deleteTask, modifyTask }) => {
+const List = ({ elements, deleteElement, modifyElement }) => {
+  const ids = Object.keys(elements);
   return (
-    <ul>
-      {!todos.length
-        ? 'No tasks in your list yet!'
-        : todos.map((todo) => (
-            <li key={todo.id}>
-              <p contentEditable="true" onBlur={(e) => modifyTask(e, todo.id)}>
-                {todo.task}
+    <>
+      {!ids.length ? (
+        <div>No elements in your list yet!</div>
+      ) : (
+        <ul>
+          {ids.map((id) => (
+            <li key={id}>
+              <p
+                contentEditable="true"
+                suppressContentEditableWarning="true"
+                onBlur={(e) => modifyElement(e, id)}
+                onKeyPress={(e) => e.key === 'Enter' && e.target.blur()}
+              >
+                {elements[id]}
               </p>
-              <button onClick={(e) => deleteTask(e, todo.id)}>Delete</button>
+              <button onClick={(e) => deleteElement(e, id)}>Delete</button>
             </li>
           ))}
-    </ul>
+        </ul>
+      )}
+    </>
   );
 };
 
