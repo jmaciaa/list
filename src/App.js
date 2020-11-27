@@ -1,49 +1,54 @@
-import { useState } from 'react';
+import { useState, useReducer } from 'react';
 import './App.css';
 
-// TO DO -> accesibility, Redux/useReducer, modificarrrr
+const elementListReducer = (state, action) => {
+  switch (action.type) {
+    case 'ADD': {
+      const newElement = action.payload.trim();
+      if (newElement !== '') {
+        const id = Date.now();
+        return { ...state, [id]: newElement };
+      }
+      break;
+    }
+    case 'MODIFY': {
+      const newElement = action.payload.trim();
+      return { ...state, [action.id]: newElement };
+    }
+    case 'DELETE': {
+      const newElements = { ...state };
+      delete newElements[action.id];
+      return newElements;
+    }
+    default: {
+      return state;
+    }
+  }
+};
 
 function App() {
-  const [elements, setElements] = useState({});
-  const [value, setValue] = useState('');
-
-  const addElement = (e) => {
-    e.preventDefault();
-    const newElement = e.target.elements.element.value.trim();
-    if (newElement !== '') {
-      const id = Date.now();
-      setElements({ ...elements, [id]: newElement });
-      setValue('');
-    }
-  };
-
-  const modifyElement = (e, id) => {
-    const newElement = e.target.textContent;
-    setElements({ ...elements, [id]: newElement });
-  };
-
-  const deleteElement = (e, id) => {
-    const newElements = { ...elements };
-    delete newElements[id];
-    setElements(newElements);
-  };
+  const [state, dispatch] = useReducer(elementListReducer, {});
 
   return (
     <div className="App">
-      <Form addElement={addElement} value={value} setValue={setValue} />
-      <List
-        elements={elements}
-        deleteElement={deleteElement}
-        modifyElement={modifyElement}
-      />
+      <h1>My Elements List</h1>
+      <Form dispatch={dispatch} />
+      <List state={state} dispatch={dispatch} />
     </div>
   );
 }
 
-const Form = ({ addElement, value, setValue }) => {
+export const Form = ({ dispatch }) => {
+  const [value, setValue] = useState('');
   return (
-    <form onSubmit={addElement}>
-      <label htmlFor="element"></label>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        dispatch({ type: 'ADD', payload: e.target.elements.element.value });
+        setValue('');
+      }}
+    >
+      <label htmlFor="element" aria-label="element"></label>
       <input
         type="text"
         id="element"
@@ -56,12 +61,12 @@ const Form = ({ addElement, value, setValue }) => {
   );
 };
 
-const List = ({ elements, deleteElement, modifyElement }) => {
-  const ids = Object.keys(elements);
+export const List = ({ state, dispatch }) => {
+  const ids = Object.keys(state);
   return (
     <>
       {!ids.length ? (
-        <div>No elements in your list yet!</div>
+        <div className="msg">No elements in your list yet!</div>
       ) : (
         <ul>
           {ids.map((id) => (
@@ -69,12 +74,20 @@ const List = ({ elements, deleteElement, modifyElement }) => {
               <p
                 contentEditable="true"
                 suppressContentEditableWarning="true"
-                onBlur={(e) => modifyElement(e, id)}
-                onKeyPress={(e) => e.key === 'Enter' && e.target.blur()}
+                onBlur={(e) =>
+                  dispatch({
+                    type: 'MODIFY',
+                    payload: e.target.textContent,
+                    id,
+                  })
+                }
+                onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
               >
-                {elements[id]}
+                {state[id]}
               </p>
-              <button onClick={(e) => deleteElement(e, id)}>Delete</button>
+              <button onClick={() => dispatch({ type: 'DELETE', id })}>
+                Delete
+              </button>
             </li>
           ))}
         </ul>
