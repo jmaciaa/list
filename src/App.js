@@ -1,33 +1,35 @@
 import { useState, useReducer } from 'react';
 import './App.css';
 
-const elementListReducer = (state, action) => {
+export const elementListReducer = (state, action) => {
   switch (action.type) {
     case 'ADD': {
       const newElement = action.payload.trim();
       if (newElement !== '') {
         const id = Date.now();
-        return { ...state, [id]: newElement };
+        return [...state, { id, name: newElement }];
       }
-      break;
+      return state;
     }
     case 'MODIFY': {
-      const newElement = action.payload.trim();
-      return { ...state, [action.id]: newElement };
+      const id = action.el.id;
+      const newName = action.payload.trim();
+      const newState = state.map((el) =>
+        el.id === id ? { id, name: newName } : el
+      );
+      return newState;
     }
     case 'DELETE': {
-      const newElements = { ...state };
-      delete newElements[action.id];
-      return newElements;
+      return state.filter((el) => el.id !== action.payload.id);
     }
     default: {
-      return state;
+      throw new Error(`Unhandled action type: ${action.type}`);
     }
   }
 };
 
 function App() {
-  const [state, dispatch] = useReducer(elementListReducer, {});
+  const [state, dispatch] = useReducer(elementListReducer, []);
 
   return (
     <div className="App">
@@ -40,6 +42,7 @@ function App() {
 
 export const Form = ({ dispatch }) => {
   const [value, setValue] = useState('');
+
   return (
     <form
       onSubmit={(e) => {
@@ -62,15 +65,14 @@ export const Form = ({ dispatch }) => {
 };
 
 export const List = ({ state, dispatch }) => {
-  const ids = Object.keys(state);
   return (
     <>
-      {!ids.length ? (
+      {!state.length ? (
         <div className="msg">No elements in your list yet!</div>
       ) : (
         <ul>
-          {ids.map((id) => (
-            <li key={id}>
+          {state.map((el) => (
+            <li key={el.id}>
               <p
                 contentEditable="true"
                 suppressContentEditableWarning="true"
@@ -78,14 +80,14 @@ export const List = ({ state, dispatch }) => {
                   dispatch({
                     type: 'MODIFY',
                     payload: e.target.textContent,
-                    id,
+                    el,
                   })
                 }
                 onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
               >
-                {state[id]}
+                {el.name}
               </p>
-              <button onClick={() => dispatch({ type: 'DELETE', id })}>
+              <button onClick={() => dispatch({ type: 'DELETE', payload: el })}>
                 Delete
               </button>
             </li>

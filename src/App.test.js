@@ -1,9 +1,13 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import App, { Form, List } from './App';
+import App, { Form, List, elementListReducer } from './App';
 
-const elements = { 1: 'Book', 2: 'Table' };
+const elements = [
+  { id: 1, name: 'Book' },
+  { id: 2, name: 'Table' },
+];
 const event = { target: { value: 'Keyboard' } };
-const addElements = () => {
+
+const addElement = () => {
   fireEvent.change(screen.getByPlaceholderText('Add an element'), event);
   fireEvent.click(screen.getByText('Add'));
 };
@@ -24,27 +28,43 @@ describe('App', () => {
     expect(screen.getByText('Keyboard')).toBeInTheDocument();
   });
 
+  test('an element is not created if input is empty', () => {
+    render(<App />);
+    const fakeEvent = { target: { value: ' ' } };
+    fireEvent.change(screen.getByPlaceholderText('Add an element'), fakeEvent);
+    fireEvent.click(screen.getByText('Add'));
+    expect(screen.getByText(/no elements/i)).toBeInTheDocument();
+  });
+
   test('an element can be deleted', () => {
     render(<App />);
-    addElements();
+    addElement();
     fireEvent.click(screen.getByText('Delete'));
     expect(screen.queryByText('Keyboard')).not.toBeInTheDocument();
   });
 
   test('an element can be modified', () => {
     render(<App />);
-    addElements();
+    addElement();
+    fireEvent.change(screen.getByPlaceholderText('Add an element'), {
+      target: { value: 'Headphones' },
+    });
+    fireEvent.click(screen.getByText('Add'));
     fireEvent.blur(screen.getByText('Keyboard'), {
       target: { textContent: 'Mouse' },
     });
     expect(screen.getByText('Mouse')).toBeInTheDocument();
     screen.getByText('Mouse').focus();
-    fireEvent.keyPress(screen.getByText('Mouse'), {
+    fireEvent.keyDown(screen.getByText('Mouse'), {
       key: 'Enter',
     });
-    expect(screen.getByText('Mouse')).toHaveFocus();
-    screen.debug();
-    // expect(screen.getByText('Screen')).toBeInTheDocument();
+    expect(screen.getByText('Mouse')).not.toHaveFocus();
+    expect(screen.getByText('Headphones')).toBeInTheDocument();
+  });
+
+  test('the state is kept if an action that does not exist is dispatched', () => {
+    const action = { type: 'DO_SOMETHING' };
+    expect(() => elementListReducer([], action)).toThrow();
   });
 });
 
@@ -58,13 +78,13 @@ describe('Form', () => {
 
 describe('List', () => {
   test('renders elements', () => {
-    render(<List elements={elements} />);
+    render(<List state={elements} />);
     expect(screen.getByText('Table')).toBeInTheDocument();
     expect(screen.getByText('Book')).toBeInTheDocument();
   });
 
   test('when there are no elements, a message should show', async () => {
-    render(<List elements={{}} />);
+    render(<List state={[]} />);
     expect(screen.getByText(/no elements/i)).toBeInTheDocument();
   });
 });
